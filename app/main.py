@@ -1,6 +1,7 @@
 import socket
 import threading
 import sys
+import os
 
 
 def handle_client(client: socket.socket):
@@ -13,10 +14,13 @@ def handle_client(client: socket.socket):
         client.close()
         return
 
+    type: str = request_data[0].split(" ")[0]
     path: str = request_data[0].split(" ")[1]
 
+    body: str = request_data[7]
+
     # DEBUG
-    #print(request_data)
+    print(request_data)
 
     if path == "/":
         response: bytes = "HTTP/1.1 200 OK\r\n\r\n".encode()
@@ -28,16 +32,26 @@ def handle_client(client: socket.socket):
         response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}".encode()
     elif path.startswith("/files"):
         directory = sys.argv[2]
-        filename = path[7:]
-        
         # DEBUG
         #print(f"Requested: {directory} {filename}")
-
-        try:
-            with open(f"/{directory}/{filename}", "r") as f:
-                body = f.read()
-            response = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(body)}\r\n\r\n{body}".encode()
-        except Exception as e:
+        if type == "GET":
+            filename = path[7:]
+            try:
+                with open(f"./{directory}/{filename}", "r") as f:
+                    body = f.read()
+                response = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(body)}\r\n\r\n{body}".encode()
+            except Exception as e:
+                response = f"HTTP/1.1 404 Not Found\r\n\r\n".encode()
+        if type == "POST":
+            filename = path[6:]
+            print(filename)
+            #try:
+            with open(f"./files/{filename}", "w") as f:
+                f.write(body)
+            response = f"HTTP/1.1 201 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(body)}\r\n\r\n{body}".encode()
+            #except Exception as e:
+            #    response = f"HTTP/1.1 404 Not Found\r\n\r\n".encode()
+        else:
             response = f"HTTP/1.1 404 Not Found\r\n\r\n".encode()
 
     else:
